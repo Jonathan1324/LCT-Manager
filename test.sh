@@ -1,3 +1,5 @@
 python3 -m ci.ci
 
-dist/bin/lct $@
+cd test
+../dist/bin/lct $@
+cd ..
