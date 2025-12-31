@@ -17,7 +17,7 @@ DEBUG ?= 0
 VERSION ?= commit
 
 # Basis-Flags
-INCLUDE_FLAGS = -I$(abspath src/lib/) -I$(abspath src/rust/)
+INCLUDE_FLAGS = -I$(abspath src/rust/)
 COMMON_WARNINGS = -Wall -Wextra
 OPT_FLAGS = -O2
 DEBUG_FLAGS = -g

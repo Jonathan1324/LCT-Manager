@@ -1,4 +1,5 @@
 import ci.build as build
+import ci.artifacts as artifacts
 import ci.archive as archive
 
 from ci.os import OS, ARCH, getOS, getArch
@@ -97,6 +98,11 @@ def main(args, os: OS, arch: ARCH) -> bool:
     result: bool = build.build(debug=args.debug, os=os, arch=arch)
     if (not result):
         logger.error("Building failed")
+        return False
+
+    result = artifacts.stage(debug=args.debug)
+    if (not result):
+        logger.error("Staging artifacts failed")
         return False
 
     if (not args.test):

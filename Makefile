@@ -20,50 +20,44 @@ endif
 
 SRC_DIR := $(shell pwd)/$(SRC_DIR)
 BUILD_DIR := $(shell pwd)/$(BUILD_DIR)
-DIST_DIR := $(shell pwd)/$(DIST_DIR)
-BIN_DIR = $(DIST_DIR)/bin
+BIN_DIR = $(BUILD_DIR)
+LIB_DIR = $(BUILD_DIR)/lib
 
-# FILES
-C_SRCS = $(shell find $(SRC_DIR) -name '*.c' | sed "s|$(SRC_DIR)/||")
-C_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.c.o, $(C_SRCS))
-
-CPP_SRCS = $(shell find $(SRC_DIR) -name '*.cpp' | sed "s|$(SRC_DIR)/||")
-CPP_OBJS = $(patsubst %.cpp, $(BUILD_DIR)/%.cpp.o, $(CPP_SRCS))
-
-CFLAGS	 += -I$(SRC_DIR)
-CXXFLAGS += -I$(SRC_DIR)
-
-DEPS := $(C_OBJS:.o=.d) $(CPP_OBJS:.o=.d)
-TARGET = $(BIN_DIR)/lct$(EXE_EXT)
+LDFLAGSSRC = -L$(LIB_DIR) -lrust
 
 .PHONE: all clean
 
-all: lct
+all: lct librust
 
-lct: $(TARGET)
+lct: librust
+	@$(MAKE) -C $(SRC_DIR)/lct 				\
+		DEBUG=$(DEBUG)						\
+											\
+		CC=$(CC) CFLAGS="$(CFLAGS)" 		\
+		CXX=$(CXX) CXXFLAGS="$(CXXFLAGS)"	\
+		AR=$(AR) ARFLAGS=$(ARFLAGS)			\
+		LDFLAGS="$(LDFLAGSSRC) $(LDFLAGS)"	\
+		STRIPFLAGS="$(STRIPFLAGS)"			\
+		RANLIB=$(RANLIB)					\
+		SRC_DIR=$(SRC_DIR)/lct 				\
+		LIB_DIR=$(LIB_DIR)					\
+		LIB=core							\
+		BUILD_DIR=$(BUILD_DIR)/lct			\
+		BIN_DIR=$(BIN_DIR)
 
-# Compile C files
-$(BUILD_DIR)/%.c.o: $(SRC_DIR)/%.c
-	@echo "Compiling " $<
-	@mkdir -p $(dir $@)
-	@$(CC) $(CFLAGS) -MMD -MF $(@:.o=.d) -c $< -o $@
-
-# Compile C++ files
-$(BUILD_DIR)/%.cpp.o: $(SRC_DIR)/%.cpp
-	@echo "Compiling  " $<
-	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) -MMD -MF $(@:.o=.d) -c $< -o $@
-
-# link files
-$(TARGET): $(C_OBJS) $(CPP_OBJS) $(ASM_OBJS) $(wildcard $(LIB_DIR)/*.a)
-	@echo "Linking " $@
-	@mkdir -p $(BIN_DIR)
-	@$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
-ifeq (${DEBUG},0)
-	@strip $(STRIPFLAGS) $@
-endif
-
--include $(DEPS)
+librust:
+	@$(MAKE) -C $(SRC_DIR)/rust				\
+		DEBUG=$(DEBUG)						\
+											\
+		RUSTFLAGS="$(RUSTFLAGS)"			\
+		RUSTLIBFLAGS="$(RUSTLIBFLAGS)"		\
+		RUST_TARGET="$(RUST_TARGET)"		\
+		SRC_DIR=$(SRC_DIR)/rust 			\
+		LIB_DIR=$(LIB_DIR)					\
+		STRIPFLAGS="$(STRIPFLAGS)"			\
+		LIB=rust							\
+		BUILD_DIR=$(BUILD_DIR)/rust			\
+		BIN_DIR=$(BIN_DIR)
 
 clean:
 	@rm -rf $(BUILD_DIR)
