@@ -21,42 +21,24 @@ endif
 SRC_DIR := $(shell pwd)/$(SRC_DIR)
 BUILD_DIR := $(shell pwd)/$(BUILD_DIR)
 BIN_DIR = $(BUILD_DIR)
-LIB_DIR = $(BUILD_DIR)/lib
-
-LDFLAGSSRC = -L$(LIB_DIR) -lrust
 
 .PHONE: all clean
 
-all: lct librust
+all: lct
 
-lct: librust
-	@$(MAKE) -C $(SRC_DIR)/lct 				\
+lct:
+	@$(MAKE) -C $(SRC_DIR)  				\
 		DEBUG=$(DEBUG)						\
 											\
 		CC=$(CC) CFLAGS="$(CFLAGS)" 		\
 		CXX=$(CXX) CXXFLAGS="$(CXXFLAGS)"	\
 		AR=$(AR) ARFLAGS=$(ARFLAGS)			\
-		LDFLAGS="$(LDFLAGSSRC) $(LDFLAGS)"	\
+		LDFLAGS="$(LDFLAGS)"				\
 		STRIPFLAGS="$(STRIPFLAGS)"			\
 		RANLIB=$(RANLIB)					\
-		SRC_DIR=$(SRC_DIR)/lct 				\
-		LIB_DIR=$(LIB_DIR)					\
+		SRC_DIR=$(SRC_DIR)  				\
 		LIB=core							\
-		BUILD_DIR=$(BUILD_DIR)/lct			\
-		BIN_DIR=$(BIN_DIR)
-
-librust:
-	@$(MAKE) -C $(SRC_DIR)/rust				\
-		DEBUG=$(DEBUG)						\
-											\
-		RUSTFLAGS="$(RUSTFLAGS)"			\
-		RUSTLIBFLAGS="$(RUSTLIBFLAGS)"		\
-		RUST_TARGET="$(RUST_TARGET)"		\
-		SRC_DIR=$(SRC_DIR)/rust 			\
-		LIB_DIR=$(LIB_DIR)					\
-		STRIPFLAGS="$(STRIPFLAGS)"			\
-		LIB=rust							\
-		BUILD_DIR=$(BUILD_DIR)/rust			\
+		BUILD_DIR=$(BUILD_DIR)  			\
 		BIN_DIR=$(BIN_DIR)
 
 clean:
