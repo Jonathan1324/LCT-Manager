@@ -1,3 +1,3 @@
 #pragma once
 
-char* downloadSource(const char* version);
+char* downloadSource(const char* version, const char* path);

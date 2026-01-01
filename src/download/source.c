@@ -6,7 +6,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
-static int is_directory(const char* path) {
+static int is_directory(const char* path)
+{
     DWORD attr = GetFileAttributesA(path);
     if (attr == INVALID_FILE_ATTRIBUTES) return 0;
     return (attr & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -14,14 +15,16 @@ static int is_directory(const char* path) {
 #else
 #include <sys/stat.h>
 #include <dirent.h>
-static int is_directory(const char* path) {
+static int is_directory(const char* path)
+{
     struct stat st;
     if (stat(path, &st) != 0) return 0;
     return S_ISDIR(st.st_mode);
 }
 #endif
 
-static char* find_top_level_folder(const char* base_dir) {
+static char* find_top_level_folder(const char* base_dir)
+{
 #ifdef _WIN32
     char* search_path = (char*)malloc(strlen(base_dir) + 3);
     if (!search_path) return NULL;
@@ -81,7 +84,7 @@ static char* find_top_level_folder(const char* base_dir) {
 #endif
 }
 
-char* downloadSource(const char* version)
+char* downloadSource(const char* version, const char* path)
 {
     if (!version) return NULL;
 
@@ -95,6 +98,7 @@ char* downloadSource(const char* version)
     size_t base1_len = sizeof(base1) - 1;
     size_t base2_len = sizeof(base2) - 1;
     size_t version_len = strlen(version);
+    size_t path_len = strlen(path);
 
     size_t url_len = base1_len + version_len + base2_len + 1;
     char* url = (char*)malloc(url_len);
@@ -109,34 +113,44 @@ char* downloadSource(const char* version)
     pos += base2_len;
     *pos = '\0';
 
-    size_t file_len = version_len + base2_len + 1;
-    char* file_name = (char*)malloc(file_len);
-    if (!file_name) {
+    size_t file_len = path_len + 1 + version_len + base2_len + 1;
+    char* file_path = (char*)malloc(file_len);
+    if (!file_path) {
         free(url);
         return NULL;
     }
-    memcpy(file_name, version, version_len);
-    memcpy(file_name + version_len, base2, base2_len);
-    file_name[file_len - 1] = '\0';
+    pos = file_path;
+    memcpy(pos, path, path_len);
+    pos += path_len;
+    *pos = '/';
+    pos++;
+    memcpy(pos, version, version_len);
+    pos += version_len;
+    memcpy(pos, base2, base2_len);
+    pos += base2_len;
+    *pos = '\0';
 
-    if (curl(url, file_name) != 0) {
+    if (curl(url, file_path) != 0) {
         free(url);
-        free(file_name);
+        free(file_path);
         return NULL;
     }
     free(url);
 
 #ifdef _WIN32
-    if (unzip(file_name, ".") != 0) {
-#else
-    if (tar_gz(file_name, ".") != 0) {
-#endif
+    if (unzip(file_name, path) != 0) {
         free(file_name);
         return NULL;
     }
-    free(file_name);
+#else
+    if (tar_gz(file_path, path) != 0) {
+        free(file_path);
+        return NULL;
+    }
+#endif
+    free(file_path);
 
-    char* top_level_folder = find_top_level_folder(".");
+    char* top_level_folder = find_top_level_folder(path);
 
     return top_level_folder;
 }
