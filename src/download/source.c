@@ -138,8 +138,8 @@ char* downloadSource(const char* version, const char* path)
     free(url);
 
 #ifdef _WIN32
-    if (unzip(file_name, path) != 0) {
-        free(file_name);
+    if (unzip(file_path, path) != 0) {
+        free(file_path);
         return NULL;
     }
 #else
@@ -148,6 +148,8 @@ char* downloadSource(const char* version, const char* path)
         return NULL;
     }
 #endif
+    sh_remove(file_path);
+
     free(file_path);
 
     char* top_level_folder = find_top_level_folder(path);

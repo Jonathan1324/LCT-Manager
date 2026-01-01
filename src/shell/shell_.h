@@ -17,4 +17,5 @@ static inline int invokeShellCall(const char* cmd)
 }
 #endif
 
+int shell2Bases(const char* b1, const char* b2, const char* c1);
 int shell3Bases(const char* b1, const char* b2, const char* b3, const char* c1, const char* c2);

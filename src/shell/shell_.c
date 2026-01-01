@@ -74,3 +74,31 @@ int shell3Bases(const char* b1, const char* b2, const char* b3, const char* c1, 
     free(cmd);
     return res;
 }
+
+int shell2Bases(const char* b1, const char* b2, const char* c1)
+{
+    unsigned int b1_length = strlen(b1);
+    unsigned int b2_length = strlen(b2);
+    unsigned int c1_length = strlen(c1);
+    unsigned int length = b1_length + b2_length + c1_length + 1;
+
+    char* cmd = (char*)malloc(length);
+    if (!cmd) return -2;
+
+    char* pos = cmd;
+
+    memcpy(pos, b1, b1_length);
+    pos += b1_length;
+
+    memcpy(pos, c1, c1_length);
+    pos += c1_length;
+
+    memcpy(pos, b2, b2_length);
+    pos += b2_length;
+
+    *pos = '\0';
+
+    int res = invokeShellCall(cmd);
+    free(cmd);
+    return res;
+}

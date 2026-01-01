@@ -1,5 +1,7 @@
 #include "curl.h"
 
+#include "shell_.h"
+
 int curl(const char* url, const char* destination)
 {
 #ifdef _WIN32
