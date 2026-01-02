@@ -1,12 +1,12 @@
 #include "archive.h"
-#include "mkdir.h"
+#include "shell_.h"
 
 int unzip(const char* path, const char* out)
 {
 #ifdef _WIN32
-    const char* base1 = "Expand-Archive -Force \"";
-    const char* base2 = "\" \"";
-    const char* base3 = "\"";
+    const char* base1 = "Expand-Archive -Force ";
+    const char* base2 = " ";
+    const char* base3 = "";
 #else
     const char* base1 = "unzip -o \"";
     const char* base2 = "\" -d \"";

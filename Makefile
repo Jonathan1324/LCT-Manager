@@ -34,12 +34,14 @@ lct:
 		CXX=$(CXX) CXXFLAGS="$(CXXFLAGS)"	\
 		AR=$(AR) ARFLAGS=$(ARFLAGS)			\
 		LDFLAGS="$(LDFLAGS)"				\
+		STRIP="$(STRIP)"					\
 		STRIPFLAGS="$(STRIPFLAGS)"			\
 		RANLIB=$(RANLIB)					\
 		SRC_DIR=$(SRC_DIR)  				\
 		LIB=core							\
 		BUILD_DIR=$(BUILD_DIR)  			\
 		BIN_DIR=$(BIN_DIR)					\
+		EXE_EXT=$(EXE_EXT)					\
 		$(ARGS_OS)
 
 clean:

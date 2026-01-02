@@ -27,11 +27,11 @@ typedef unsigned char Command;
 
 int main(int argc, const char* argv[])
 {
-    const char* version_str = "v0.1.0-alpha.5";
+    const char* version_str = "v0.1.0-alpha.5-jan2026.1";
     
 #if DO_LOCAL_TEST == 0
 # ifdef _WIN32
-    const fs::path main_dir = "test";
+    const fs::path main_dir = "test"; // TODO
 # else
     const fs::path main_dir = "~/.lct";
 # endif

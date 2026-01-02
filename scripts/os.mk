@@ -1,7 +1,7 @@
-ifeq ($(OS_NAME), windows)
-  EXE_EXT := .exe
+ifeq ($(OS_NAME),windows)
+    EXE_EXT = .exe
 else
-  EXE_EXT :=
+    EXE_EXT =
 endif
 
 ifeq ($(OS_NAME),windows)

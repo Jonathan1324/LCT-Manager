@@ -149,7 +149,6 @@ char* downloadSource(const char* version, const char* path)
     }
 #endif
     sh_remove(file_path);
-
     free(file_path);
 
     char* top_level_folder = find_top_level_folder(path);
