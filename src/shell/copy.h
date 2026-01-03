@@ -1,3 +1,5 @@
 #pragma once
 
-int copy(const char* path, const char* dest);
+#include "shell_.h"
+
+CommandResult copy(const char* path, const char* dest);

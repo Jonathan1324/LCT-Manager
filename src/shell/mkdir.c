@@ -1,11 +1,11 @@
 #include "mkdir.h"
 #include "shell_.h"
 
-int sh_mkdir(const char* path)
+CommandResult sh_mkdir(const char* path)
 {
 #ifdef _WIN32
-    const char* base1 = "New-Item -ItemType Directory -Force ";
-    const char* base2 = "";
+    const char* base1 = "New-Item -ItemType Directory -Force '";
+    const char* base2 = "'";
 #else
     const char* base1 = "mkdir -p \"";
     const char* base2 = "\"";

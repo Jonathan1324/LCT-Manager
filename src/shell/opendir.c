@@ -3,17 +3,17 @@
 #include <unistd.h>
 #include <limits.h>
 
-int openDir(const char* path, int (*fn)(void*), void* ctx)
+CommandResult openDir(const char* path, CommandResult (*fn)(void*), void* ctx)
 {
     char oldcwd[PATH_MAX];
 
     if (!getcwd(oldcwd, sizeof(oldcwd)))
-        return -1;
+        return invalidCommandResult;
 
     if (chdir(path) != 0)
-        return -1;
+        return invalidCommandResult;
 
-    int rc = fn(ctx);
+    CommandResult rc = fn(ctx);
 
     chdir(oldcwd);
     return rc;

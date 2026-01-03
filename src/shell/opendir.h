@@ -1,3 +1,5 @@
 #pragma once
 
-int openDir(const char* path, int (*fn)(void*), void* ctx);
+#include "shell_.h"
+
+CommandResult openDir(const char* path, CommandResult (*fn)(void*), void* ctx);

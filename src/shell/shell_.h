@@ -3,19 +3,24 @@
 #include <stdlib.h>
 #include <string.h>
 
-static inline int invokeSystemCall(const char* cmd)
-{
-    return system(cmd);
-}
+typedef struct CommandResult {
+    int exit_code;
+    char* stdout_str;
+    char* stderr_str;
+} CommandResult;
+
+extern const CommandResult invalidCommandResult;
+
+CommandResult invokeSystemCall(const char* cmd);
 
 #ifdef _WIN32
-int invokeShellCall(const char* cmd);
+CommandResult invokeShellCall(const char* cmd);
 #else
-static inline int invokeShellCall(const char* cmd)
+static inline CommandResult invokeShellCall(const char* cmd)
 {
     return invokeSystemCall(cmd);
 }
 #endif
 
-int shell2Bases(const char* b1, const char* b2, const char* c1);
-int shell3Bases(const char* b1, const char* b2, const char* b3, const char* c1, const char* c2);
+CommandResult shell2Bases(const char* b1, const char* b2, const char* c1);
+CommandResult shell3Bases(const char* b1, const char* b2, const char* b3, const char* c1, const char* c2);

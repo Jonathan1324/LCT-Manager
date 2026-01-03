@@ -1,3 +1,5 @@
 #pragma once
 
-int sh_mkdir(const char* path);
+#include "shell_.h"
+
+CommandResult sh_mkdir(const char* path);

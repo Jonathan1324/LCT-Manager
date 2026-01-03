@@ -1,3 +1,5 @@
 #pragma once
 
-int curl(const char* url, const char* destination);
+#include "shell_.h"
+
+CommandResult curl(const char* url, const char* destination);
