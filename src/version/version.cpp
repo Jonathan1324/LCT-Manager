@@ -32,20 +32,28 @@ CommandResult buildToolchain(void* vdata)
     return invokeSystemCall(cmd.c_str());
 }
 
-void install_version(const char* version_str, const fs::path& source_dir, const fs::path& dest_dir, const std::vector<std::string>& tools)
+void install_version(const char* version_str, const fs::path& source_dir, const fs::path& dest_dir, const std::vector<std::string>& tools, bool use_ansi)
 {
     PATH_MAKE_STRING(source_dir);
     PATH_MAKE_STRING(dest_dir);
 
     sh_mkdir(source_dir_string.c_str());
 
-    std::cout << "==> Downloading source of " << version_str << " ..." << std::endl;
+    std::cout << "==> Downloading source of ";
+    if (use_ansi) std::cout << "\033[36m";
+    std::cout << version_str;
+    if (use_ansi) std::cout << "\033[0m";
+    std::cout << "..." << std::endl;
     char* archive = downloadSource(version_str, source_dir_string.c_str());
     if (!archive) {
         throw std::runtime_error(std::string("Couldn't download source of ") + version_str);
     }
 
-    std::cout << "==> Unarchiving source of " << version_str << " ..." << std::endl;
+    std::cout << "==> Unarchiving source of ";
+    if (use_ansi) std::cout << "\033[36m";
+    std::cout << version_str;
+    if (use_ansi) std::cout << "\033[0m";
+    std::cout << "..." << std::endl;
     char* unarchived = unpackSource(archive, source_dir_string.c_str(), version_str);
     if (!unarchived) {
         sh_remove(archive);
@@ -62,7 +70,11 @@ void install_version(const char* version_str, const fs::path& source_dir, const 
     buildData build_data;
     build_data.tools = tools;
 
-    std::cout << "==> Building source of " << version_str << " ..." << std::endl;
+    std::cout << "==> Building source of ";
+    if (use_ansi) std::cout << "\033[36m";
+    std::cout << version_str;
+    if (use_ansi) std::cout << "\033[0m";
+    std::cout << "..." << std::endl;
     CommandResult res = openDir(full_source_string.c_str(), buildToolchain, reinterpret_cast<void*>(&build_data));
     if (res.exit_code != 0) {
         sh_remove(full_source_string.c_str());
@@ -72,7 +84,11 @@ void install_version(const char* version_str, const fs::path& source_dir, const 
     const fs::path full_dist = full_source / "dist";
     PATH_MAKE_STRING(full_dist);
 
-    std::cout << "==> Copying 'dist/' of " << version_str << " ..." << std::endl;
+    std::cout << "==> Copying 'dist/' of ";
+    if (use_ansi) std::cout << "\033[36m";
+    std::cout << version_str;
+    if (use_ansi) std::cout << "\033[0m";
+    std::cout << "..." << std::endl;
     res = copy(full_dist_string.c_str(), dest_dir_string.c_str());
     if (res.exit_code != 0) {
         sh_remove(full_source_string.c_str());

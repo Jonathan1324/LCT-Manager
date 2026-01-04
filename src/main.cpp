@@ -41,6 +41,16 @@ static std::unordered_map<std::string, std::vector<std::string> > bundles = {
     {"fun", {"lbf", "ljoke", "lhoho"}}
 };
 
+void printHelp(const char* name, std::ostream& out, bool use_ansi)
+{
+    out << "Usage: " << name << " <command> <args>" << std::endl;
+
+    out << "> " << name << " install <tools>" << std::endl;
+    out << "> " << name << " uninstall <tools>" << std::endl;
+    out << "> " << name << " reinstall <tools>" << std::endl;
+    out << "> " << name << " list" << std::endl;
+}
+
 int main(int argc, const char* argv[])
 {
 #if DO_LOCAL_TEST == 0
@@ -52,8 +62,10 @@ int main(int argc, const char* argv[])
     const fs::path source_dir = main_dir / "archives";
     const fs::path install_dir = main_dir / "current";
 
+    bool use_ansi = true;
+
     if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <command> <args>" << std::endl;
+        printHelp(argv[0], std::cerr, use_ansi);
         return 1;
     }
 
@@ -62,7 +74,7 @@ int main(int argc, const char* argv[])
 
     State state;
     if (!state.Load(state_file)) {
-        std::cerr << "Couldn't load state from " << state_file_string << std::endl;
+        printHelp(argv[0], std::cerr, use_ansi);
         return 1;
     }
 
@@ -102,7 +114,9 @@ int main(int argc, const char* argv[])
                 const std::string& tool = tools[i];
 
                 if (valid_tools_deps.find(tool) == valid_tools_deps.end()) {
+                    if (use_ansi) std::cerr << "\033[33m";
                     std::cerr << "Warning: " << tool << " doesn't exist. Skipping." << std::endl;
+                    if (use_ansi) std::cerr << "\033[0m";
                     tools.erase(tools.begin() + i);
                     invalid_tool = true;
 
@@ -110,7 +124,9 @@ int main(int argc, const char* argv[])
                 }
 
                 if (!state.IsInstalled(tool)) {
+                    if (use_ansi) std::cerr << "\033[33m";
                     std::cerr << "Warning: " << tool << " isn't installed. Skipping." << std::endl;
+                    if (use_ansi) std::cerr << "\033[0m";
                     tools.erase(tools.begin() + i);
                     invalid_tool = true;
 
@@ -125,7 +141,9 @@ int main(int argc, const char* argv[])
 
                     for (const auto& dep : deps) {
                         if (dep == tool) {
+                            if (use_ansi) std::cerr << "\033[0m";
                             std::cerr << "Cannot uninstall " << tool  << ": still required by installed tool " << other_tool << ".\n";
+                            if (use_ansi) std::cerr << "\033[0m";
                             required_by_other = true;
                             break;
                         }
@@ -144,8 +162,15 @@ int main(int argc, const char* argv[])
 
             if (!tools.empty()) {
                 try {
-                    std::cout << "=> Uninstalling ";
-                    for (const std::string& tool : tools) std::cout << tool << " ";
+                    std::cout << "=> Uninstalling";
+
+                    for (const std::string& tool : tools) {
+                        std::cout << " ";
+                        if (use_ansi) std::cout << "\033[32m";
+                        std::cout << tool;
+                        if (use_ansi) std::cout << "\033[0m";
+                    }
+
                     std::cout << "..." << std::endl;
 
                     uninstall_version(install_dir, tools);
@@ -154,11 +179,13 @@ int main(int argc, const char* argv[])
                         state.RemoveTool(tool);
                     }
                 } catch (const std::runtime_error& e) {
+                    if (use_ansi) std::cerr << "\033[31m";
                     std::cerr << e.what() << std::endl;
+                    if (use_ansi) std::cerr << "\033[0m"; 
                     return 1;
                 }
             } else if (!invalid_tool) {
-                std::cerr << "Usage: " << argv[0] << " uninstall <tools>" << std::endl;
+                printHelp(argv[0], std::cerr, use_ansi);
                 return 1;
             }
 
@@ -191,14 +218,18 @@ int main(int argc, const char* argv[])
                 const std::string& tool = tools[i];
 
                 if (valid_tools_deps.find(tool) == valid_tools_deps.end()) {
+                    if (use_ansi) std::cerr << "\033[33m";
                     std::cerr << "Warning: " << tool << " doesn't exist. Skipping." << std::endl;
+                    if (use_ansi) std::cerr << "\033[0m";
                     tools.erase(tools.begin() + i);
                     invalid_tool = true;
                     continue;
                 }
 
                 if (state.IsInstalled(tool)) {
+                    if (use_ansi) std::cerr << "\033[33m";
                     std::cerr << "Warning: " << tool << " is already installed. Skipping." << std::endl;
+                    if (use_ansi) std::cerr << "\033[0m";
                     tools.erase(tools.begin() + i);
                     invalid_tool = true;
                     continue;
@@ -208,7 +239,9 @@ int main(int argc, const char* argv[])
                 if (depsIt != valid_tools_deps.end()) {
                     for (const std::string& dep : depsIt->second) {
                         if (added_tools.insert(dep).second) {
+                            if (use_ansi) std::cerr << "\033[33m";
                             std::cerr << "Warning: " << tool << " requires " << dep << ". Adding " << dep << "." << std::endl;
+                            if (use_ansi) std::cerr << "\033[0m";
                             tools.push_back(dep);
                         }
                     }
@@ -220,20 +253,34 @@ int main(int argc, const char* argv[])
             if (!tools.empty()) {
                 try {
                     std::cout << "=> Installing ";
-                    for (const std::string& tool : tools) std::cout << tool << " ";
-                    std::cout << "of " << latest_version << "..." << std::endl;
 
-                    install_version(latest_version, source_dir, install_dir, tools);
+                    for (const std::string& tool : tools) {
+                        if (use_ansi) std::cout << "\033[32m";
+                        std::cout << tool;
+                        if (use_ansi) std::cout << "\033[0m";
+                        std::cout << " ";
+                    }
+
+                    std::cout << "of ";
+                    if (use_ansi) std::cout << "\033[36m";
+                    std::cout << latest_version;
+                    if (use_ansi) std::cout << "\033[0m";
+
+                    std::cout << "..." << std::endl;
+
+                    install_version(latest_version, source_dir, install_dir, tools, use_ansi);
 
                     for (const std::string& tool : tools) {
                         state.SetTool(tool, latest_version);
                     }
                 } catch (const std::runtime_error& e) {
+                    if (use_ansi) std::cerr << "\033[31m";
                     std::cerr << e.what() << std::endl;
+                    if (use_ansi) std::cerr << "\033[0m"; 
                     return 1;
                 }
             } else if (!invalid_tool) {
-                std::cerr << "Usage: " << argv[0] << " install <tools>" << std::endl;
+                printHelp(argv[0], std::cerr, use_ansi);
                 return 1;
             }
 
@@ -245,7 +292,11 @@ int main(int argc, const char* argv[])
                 const std::string& tool = kv.first;
                 const bool is_installed = state.IsInstalled(tool);
 
+                if (use_ansi) std::cout << (is_installed ? "\033[32m" : "\033[31m");
+
                 std::cout << tool << ": " << (is_installed ? "installed" : "not installed");
+
+                if (use_ansi) std::cout << "\033[0m";
 
                 if (!kv.second.empty()) {
                     std::cout << " | requires: ";
