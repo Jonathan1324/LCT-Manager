@@ -95,7 +95,11 @@ int main(int argc, const char* argv[])
     const fs::path source_dir = main_dir / "archives";
     const fs::path install_dir = main_dir / "current";
     const fs::path bin_dir = install_dir / "bin";
-    const std::string bin_dir_string = bin_dir.string();
+    std::string bin_dir_string;
+    for (char c : bin_dir.string()) {
+        if (c == '\\') bin_dir_string += "\\\\";
+        else bin_dir_string += c;
+    }
 
     bool use_ansi = static_cast<bool>(supportsANSI());
 
@@ -512,6 +516,8 @@ int main(int argc, const char* argv[])
 #ifdef _WIN32
             std::cout << "1) Terminal:\n";
             std::cout << "   setx PATH \"%PATH%;" << bin_dir_string << "\"\n\n";
+            std::cout << "   # or in PowerShell:\n";
+            std::cout << "   [Environment]::SetEnvironmentVariable(\"PATH\", $env:PATH + \";" << bin_dir_string << "\", \"User\")\n\n";
 
             std::cout << "2) Current terminal:\n";
             std::cout << "   set PATH=%PATH%;" << bin_dir_string << "\n";
