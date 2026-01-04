@@ -6,9 +6,9 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define ATOMIC_RENAME(src, dst) MoveFileExA(src, dst, MOVEFILE_REPLACE_EXISTING)
+#define ATOMIC_RENAME(src, dst) (MoveFileExA(src, dst, MOVEFILE_REPLACE_EXISTING) != 0)
 #else
-#define ATOMIC_RENAME(src, dst) rename(src, dst)
+#define ATOMIC_RENAME(src, dst) (rename(src, dst) == 0)
 #endif
 
 int State_Write(FILE* f, const State* state)
@@ -24,7 +24,7 @@ int State_Write(FILE* f, const State* state)
     return 0;
 }
 
-int State_Save(const char* path, const State* state) // TODO: fix on
+int State_Save(const char* path, const State* state)
 {
     if (!path || !state) return 1;
 
