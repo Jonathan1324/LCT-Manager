@@ -8,6 +8,7 @@
 #include "version/version.hpp"
 #include "home/home.hpp"
 #include "data/state.hpp"
+#include "terminal/terminal.h"
 
 namespace fs = std::filesystem;
 
@@ -68,7 +69,7 @@ int main(int argc, const char* argv[])
     const fs::path source_dir = main_dir / "archives";
     const fs::path install_dir = main_dir / "current";
 
-    bool use_ansi = true;
+    bool use_ansi = static_cast<bool>(supportsANSI());
 
     if (argc < 2) {
         printHelp(argv[0], std::cerr, use_ansi);
@@ -154,8 +155,8 @@ int main(int argc, const char* argv[])
 
                     for (const auto& dep : deps) {
                         if (dep == tool) {
-                            if (use_ansi) std::cerr << "\033[0m";
-                            std::cerr << "Cannot uninstall " << tool  << ": still required by installed tool " << other_tool << ".\n";
+                            if (use_ansi) std::cerr << "\033[33m";
+                            std::cerr << "Warning: Cannot uninstall " << tool  << ": still required by installed tool " << other_tool << ". Skipping.\n";
                             if (use_ansi) std::cerr << "\033[0m";
                             required_by_other = true;
                             break;
@@ -375,8 +376,8 @@ int main(int argc, const char* argv[])
 
                     for (const auto& dep : deps) {
                         if (dep == tool) {
-                            if (use_ansi) std::cerr << "\033[0m";
-                            std::cerr << "Cannot update " << tool  << ": still required by installed tool " << other_tool << ". Update both to update " << tool << ".\n";
+                            if (use_ansi) std::cerr << "\033[33m";
+                            std::cerr << "Warning: Cannot update " << tool  << ": still required by installed tool " << other_tool << ". Update both to update " << tool << ". Skipping.\n";
                             if (use_ansi) std::cerr << "\033[0m";
                             required_by_other = true;
                             break;
