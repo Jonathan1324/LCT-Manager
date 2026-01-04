@@ -9,6 +9,7 @@
 #include "home/home.hpp"
 #include "data/state.hpp"
 #include "terminal/terminal.h"
+#include "shell/shell.h"
 
 namespace fs = std::filesystem;
 
@@ -568,6 +569,8 @@ int main(int argc, const char* argv[])
             std::cerr << "Unknown command: " << argv[1] << std::endl;
             return 1;
     }
+
+    sh_mkdir(state_file.parent_path().string().c_str());
 
     if (!state.Save(state_file)) {
         std::cerr << "Couldn't save state to " << state_file_string << std::endl;
