@@ -238,6 +238,8 @@ int main(int argc, const char* argv[])
                 auto depsIt = valid_tools_deps.find(tool);
                 if (depsIt != valid_tools_deps.end()) {
                     for (const std::string& dep : depsIt->second) {
+                        if (state.IsInstalled(dep)) continue;
+
                         if (added_tools.insert(dep).second) {
                             if (use_ansi) std::cerr << "\033[33m";
                             std::cerr << "Warning: " << tool << " requires " << dep << ". Adding " << dep << "." << std::endl;
