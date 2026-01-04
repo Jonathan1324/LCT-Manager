@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dirent.h>
-#include <stdio.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -132,30 +131,32 @@ char* downloadSource(const char* version, const char* path)
     *pos = '\0';
 
     CommandResult res = curl(url, file_path);
+    free(url);
+
     if (res.exit_code != 0) {
-        free(url);
         free(file_path);
         return NULL;
     }
-    free(url);
 
-    // TODO: currently here
-    fputs("==> Unarchiving source of ", stdout);
-    fputs(version, stdout);
-    fputs("...\n", stdout);
-    fflush(stdout);
+    return file_path;
+}
+
+char* unpackSource(const char* file_path, const char* path, const char* version)
+{
+    if (!file_path || !path || !version) return NULL;
+
+    CommandResult res;
 #ifdef _WIN32
     res = unzip(file_path, path);
 #else
     res = tar_gz(file_path, path);
 #endif
+
     if (res.exit_code != 0) {
-        free(file_path);
         return NULL;
     }
-    sh_remove(file_path);
-    free(file_path);
 
+    sh_remove(file_path);
     char* top_level_folder = find_top_level_folder(path);
 
     return top_level_folder;

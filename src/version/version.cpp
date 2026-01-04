@@ -1,6 +1,7 @@
 #include "version.hpp"
 
 #include <string>
+
 #include <cstdlib>
 #include "../shell/shell.h"
 #include "../download/source.h"
@@ -11,36 +12,58 @@ namespace fs = std::filesystem;
 #define PATH_MAKE_STRING(name) \
     const std::string& name##_string = name.string()
 
-CommandResult buildToolchain(void* null)
+struct buildData {
+    std::vector<std::string> tools;
+};
+
+CommandResult buildToolchain(void* vdata)
 {
+    buildData* data = reinterpret_cast<buildData*>(vdata);
+
 #ifdef _WIN32
-    const char* cmd = "python -m ci.ci --no-test";
+    const char* cmd_base = "python -m ci.ci --no-test";
 #else
-    const char* cmd = "python3 -m ci.ci --no-test";
+    const char* cmd_base = "python3 -m ci.ci --no-test";
 #endif
-    return invokeSystemCall(cmd);
+
+    std::string cmd = cmd_base;
+    for (std::string& tool : data->tools) cmd += " " + tool;
+
+    return invokeSystemCall(cmd.c_str());
 }
 
-void install_version(const char* version_str, const fs::path& source_dir, const fs::path& dest_dir)
+void install_version(const char* version_str, const fs::path& source_dir, const fs::path& dest_dir, const std::vector<std::string>& tools)
 {
     PATH_MAKE_STRING(source_dir);
     PATH_MAKE_STRING(dest_dir);
 
     sh_mkdir(source_dir_string.c_str());
 
-    std::cout << "==> Downloading source of " << version_str << "..." << std::endl;
-    std::cout.flush();
-    char* name = downloadSource(version_str, source_dir_string.c_str());
-    if (!name) {
+    std::cout << "==> Downloading source of " << version_str << " ..." << std::endl;
+    char* archive = downloadSource(version_str, source_dir_string.c_str());
+    if (!archive) {
         throw std::runtime_error(std::string("Couldn't download source of ") + version_str);
     }
-    const fs::path full_source = source_dir / name;
+
+    std::cout << "==> Unarchiving source of " << version_str << " ..." << std::endl;
+    char* unarchived = unpackSource(archive, source_dir_string.c_str(), version_str);
+    if (!unarchived) {
+        sh_remove(archive);
+        std::free(archive);
+        throw std::runtime_error(std::string("Couldn't unarchive source of ") + version_str);
+    }
+
+    const fs::path full_source = source_dir / unarchived;
     PATH_MAKE_STRING(full_source);
 
-    std::free(name);
+    std::free(archive);
+    std::free(unarchived);
 
-    std::cout << "==> Building source of " << version_str << "..." << std::endl;
-    CommandResult res = openDir(full_source_string.c_str(), buildToolchain, NULL);
+    buildData build_data;
+    build_data.tools = tools;
+
+    std::cout << "==> Building source of " << version_str << " ..." << std::endl;
+    CommandResult res = openDir(full_source_string.c_str(), buildToolchain, reinterpret_cast<void*>(&build_data));
     if (res.exit_code != 0) {
         sh_remove(full_source_string.c_str());
         throw std::runtime_error(std::string("Failed to build ") + version_str + ":\nSTDERR: " + res.stderr_str + "\nSTDOUT: " + res.stdout_str);
@@ -49,7 +72,7 @@ void install_version(const char* version_str, const fs::path& source_dir, const 
     const fs::path full_dist = full_source / "dist";
     PATH_MAKE_STRING(full_dist);
 
-    std::cout << "==> Copying 'dist/' of " << version_str << "..." << std::endl;
+    std::cout << "==> Copying 'dist/' of " << version_str << " ..." << std::endl;
     res = copy(full_dist_string.c_str(), dest_dir_string.c_str());
     if (res.exit_code != 0) {
         sh_remove(full_source_string.c_str());
@@ -59,8 +82,20 @@ void install_version(const char* version_str, const fs::path& source_dir, const 
     sh_remove(full_source_string.c_str());
 }
 
-void uninstall_version(const fs::path& dest_dir)
+void uninstall_version(const fs::path& dest_dir, const std::vector<std::string>& tools)
 {
-    PATH_MAKE_STRING(dest_dir);
-    sh_remove(dest_dir_string.c_str());
+    const fs::path bin_dir = dest_dir / "bin";
+    const fs::path tpl_dir = dest_dir / "THIRD_PARTY_LICENSES";
+
+    for (const std::string& tool : tools) {
+#ifdef _WIN32
+        const fs::path executable = bin_dir / (tool + ".exe");
+#else
+        const fs::path executable = bin_dir / tool;
+#endif
+        const fs::path tpl = tpl_dir / (tool + ".txt");
+
+        sh_remove(executable.string().c_str());
+        if (fs::exists(tpl)) sh_remove(tpl.string().c_str());
+    }
 }

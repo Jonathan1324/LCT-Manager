@@ -2,9 +2,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <vector>
+#include <unordered_set>
+#include <unordered_map>
 #include "version/version.hpp"
 #include "home/home.hpp"
-#include "data/state.h"
+#include "data/state.hpp"
 
 namespace fs = std::filesystem;
 
@@ -13,10 +16,30 @@ typedef unsigned char Command;
 #define COMMAND_INSTALL     ((Command)1)
 #define COMMAND_UNINSTALL   ((Command)2)
 #define COMMAND_REINSTALL   ((Command)3)
+#define COMMAND_LIST        ((Command)4)
 
 #define DO_LOCAL_TEST 1
 
 const char* latest_version = "v0.1.0-alpha.5-jan2026.2";
+
+static std::unordered_map<std::string, std::vector<std::string>> valid_tools_deps = {
+    {"lhoho", {}},
+    {"ljoke", {}},
+    {"lbf",   {}},
+    {"lfs",   {}},
+    {"lbt",   {}},
+    {"lnk",   {}},
+    {"lasm",  {"lasmp"}},
+    {"lasmp", {}}
+};
+
+static std::unordered_map<std::string, std::vector<std::string> > bundles = {
+    {"all", {"lasmp", "lasm", "lnk", "lbt", "lfs", "lbf", "ljoke", "lhoho"}},
+
+    {"toolchain", {"lasmp", "lasm", "lnk"}},
+
+    {"fun", {"lbf", "ljoke", "lhoho"}}
+};
 
 int main(int argc, const char* argv[])
 {
@@ -38,12 +61,10 @@ int main(int argc, const char* argv[])
     const std::string state_file_string = state_file.string();
 
     State state;
-    if (State_Load(state_file_string.c_str(), &state) != 0) {
+    if (!state.Load(state_file)) {
         std::cerr << "Couldn't load state from " << state_file_string << std::endl;
         return 1;
     }
-
-    if (!state.version) state.version = latest_version;
 
     Command command = COMMAND_NONE;
     const char* cmd_str = argv[1];
@@ -51,21 +72,93 @@ int main(int argc, const char* argv[])
     if      (std::strcmp(cmd_str, "install") == 0)   command = COMMAND_INSTALL;
     else if (std::strcmp(cmd_str, "uninstall") == 0) command = COMMAND_UNINSTALL;
     else if (std::strcmp(cmd_str, "reinstall") == 0) command = COMMAND_REINSTALL;
+    else if (std::strcmp(cmd_str, "list") == 0)      command = COMMAND_LIST;
 
     switch (command)
     {
         case COMMAND_UNINSTALL: case COMMAND_REINSTALL: {
-            if (!state.installed) {
-                std::cerr << "=> LCT isn't installed" << std::endl;
-                break;
+            std::vector<std::string> tools;
+            std::unordered_set<std::string> added_tools;
+            bool invalid_tool = false;
+
+            for (int i = 2; i < argc; i++) {
+                const char* arg = argv[i];
+
+                if (arg[0] == '-') continue;
+
+                std::string name = arg;
+                
+                auto bundleIt = bundles.find(name);
+                if (bundleIt != bundles.end()) {
+                    for (const std::string& tool : bundleIt->second) {
+                        if (added_tools.insert(tool).second) tools.push_back(tool);
+                    }
+                } else {
+                    if (added_tools.insert(name).second) tools.push_back(name);
+                }
             }
 
-            try {
-                std::cout << "=> Uninstalling " << state.version << "..." << std::endl;
-                uninstall_version(install_dir);
-                state.installed = 0;
-            } catch (const std::runtime_error& e) {
-                std::cerr << e.what() << std::endl;
+            for (std::size_t i = 0; i < tools.size(); /* manual incrementing */) {
+                const std::string& tool = tools[i];
+
+                if (valid_tools_deps.find(tool) == valid_tools_deps.end()) {
+                    std::cerr << "Warning: " << tool << " doesn't exist. Skipping." << std::endl;
+                    tools.erase(tools.begin() + i);
+                    invalid_tool = true;
+
+                    continue;
+                }
+
+                if (!state.IsInstalled(tool)) {
+                    std::cerr << "Warning: " << tool << " isn't installed. Skipping." << std::endl;
+                    tools.erase(tools.begin() + i);
+                    invalid_tool = true;
+
+                    continue;
+                }
+
+                bool required_by_other = false;
+                for (const auto& [other_tool, deps] : valid_tools_deps) {
+                    if (other_tool == tool) continue;
+                    if (!state.IsInstalled(other_tool)) continue;
+                    if (added_tools.find(other_tool) != added_tools.end()) continue;
+
+                    for (const auto& dep : deps) {
+                        if (dep == tool) {
+                            std::cerr << "Cannot uninstall " << tool  << ": still required by installed tool " << other_tool << ".\n";
+                            required_by_other = true;
+                            break;
+                        }
+                    }
+                    if (required_by_other) break;
+                }
+
+                if (required_by_other) {
+                    tools.erase(tools.begin() + i);
+                    invalid_tool = true;
+                    continue;
+                }
+
+                i++;
+            }
+
+            if (!tools.empty()) {
+                try {
+                    std::cout << "=> Uninstalling ";
+                    for (const std::string& tool : tools) std::cout << tool << " ";
+                    std::cout << "..." << std::endl;
+
+                    uninstall_version(install_dir, tools);
+
+                    for (const std::string& tool : tools) {
+                        state.RemoveTool(tool);
+                    }
+                } catch (const std::runtime_error& e) {
+                    std::cerr << e.what() << std::endl;
+                    return 1;
+                }
+            } else if (!invalid_tool) {
+                std::cerr << "Usage: " << argv[0] << " uninstall <tools>" << std::endl;
                 return 1;
             }
 
@@ -73,19 +166,96 @@ int main(int argc, const char* argv[])
         }
 
         case COMMAND_INSTALL: {
-            if (state.installed) {
-                std::cerr << "=> LCT is already installed" << std::endl;
-                break;
+            std::vector<std::string> tools;
+            std::unordered_set<std::string> added_tools;
+            bool invalid_tool = false;
+
+            for (int i = 2; i < argc; i++) {
+                const char* arg = argv[i];
+
+                if (arg[0] == '-') continue;
+
+                std::string name = arg;
+                
+                auto bundleIt = bundles.find(name);
+                if (bundleIt != bundles.end()) {
+                    for (const std::string& tool : bundleIt->second) {
+                        if (added_tools.insert(tool).second) tools.push_back(tool);
+                    }
+                } else {
+                    if (added_tools.insert(name).second) tools.push_back(name);
+                }
             }
 
-            try {
-                std::cout << "=> Installing " << state.version << "..." << std::endl;
-                install_version(latest_version, source_dir, install_dir);
-                state.installed = 1;
-                state.version = latest_version;
-            } catch (const std::runtime_error& e) {
-                std::cerr << e.what() << std::endl;
+            for (std::size_t i = 0; i < tools.size(); /* manual incrementing */) {
+                const std::string& tool = tools[i];
+
+                if (valid_tools_deps.find(tool) == valid_tools_deps.end()) {
+                    std::cerr << "Warning: " << tool << " doesn't exist. Skipping." << std::endl;
+                    tools.erase(tools.begin() + i);
+                    invalid_tool = true;
+                    continue;
+                }
+
+                if (state.IsInstalled(tool)) {
+                    std::cerr << "Warning: " << tool << " is already installed. Skipping." << std::endl;
+                    tools.erase(tools.begin() + i);
+                    invalid_tool = true;
+                    continue;
+                }
+
+                auto depsIt = valid_tools_deps.find(tool);
+                if (depsIt != valid_tools_deps.end()) {
+                    for (const std::string& dep : depsIt->second) {
+                        if (added_tools.insert(dep).second) {
+                            std::cerr << "Warning: " << tool << " requires " << dep << ". Adding " << dep << "." << std::endl;
+                            tools.push_back(dep);
+                        }
+                    }
+                }
+
+                i++;
+            }
+
+            if (!tools.empty()) {
+                try {
+                    std::cout << "=> Installing ";
+                    for (const std::string& tool : tools) std::cout << tool << " ";
+                    std::cout << "of " << latest_version << "..." << std::endl;
+
+                    install_version(latest_version, source_dir, install_dir, tools);
+
+                    for (const std::string& tool : tools) {
+                        state.SetTool(tool, latest_version);
+                    }
+                } catch (const std::runtime_error& e) {
+                    std::cerr << e.what() << std::endl;
+                    return 1;
+                }
+            } else if (!invalid_tool) {
+                std::cerr << "Usage: " << argv[0] << " install <tools>" << std::endl;
                 return 1;
+            }
+
+            break;
+        }
+
+        case COMMAND_LIST: {
+            for (const auto& kv : valid_tools_deps) {
+                const std::string& tool = kv.first;
+                const bool is_installed = state.IsInstalled(tool);
+
+                std::cout << tool << ": " << (is_installed ? "installed" : "not installed");
+
+                if (!kv.second.empty()) {
+                    std::cout << " | requires: ";
+                    for (std::size_t i = 0; i < kv.second.size(); i++) {
+                        std::cout << kv.second[i];
+                        if (i + 1 < kv.second.size()) std::cout << ", ";
+                    }
+                }
+
+                std::cout << std::endl;
             }
 
             break;
@@ -96,7 +266,7 @@ int main(int argc, const char* argv[])
             return 1;
     }
 
-    if (State_Save(state_file_string.c_str(), &state) != 0) {
+    if (!state.Save(state_file)) {
         std::cerr << "Couldn't save state to " << state_file_string << std::endl;
         return 1;
     }
