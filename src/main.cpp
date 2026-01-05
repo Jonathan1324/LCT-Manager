@@ -23,6 +23,7 @@ typedef unsigned char Command;
 #define COMMAND_UPDATE      ((Command)6)
 #define COMMAND_LIST        ((Command)7)
 #define COMMAND_PATH        ((Command)8)
+#define COMMAND_REMOVE      ((Command)9)
 
 #ifdef DEBUG_BUILD
 #define DO_LOCAL_TEST 1
@@ -79,6 +80,7 @@ void printHelp(const char* name, std::ostream& out, bool use_ansi)
     out << "> " << name << " update <tools>" << std::endl;
     out << "> " << name << " list" << std::endl;
     out << "> " << name << " path" << std::endl;
+    out << "> " << name << " remove" << std::endl;
 }
 
 #define ARG_CMP(n, str) (std::strcmp(argv[n], str) == 0)
@@ -119,6 +121,7 @@ int main(int argc, const char* argv[])
     }
 
     State state;
+    bool state_changed = false;
     if (!state.Load(state_file)) {
         printHelp(argv[0], std::cerr, use_ansi);
         return 1;
@@ -134,6 +137,7 @@ int main(int argc, const char* argv[])
     else if (ARG_CMP(1, "update"))    command = COMMAND_UPDATE;
     else if (ARG_CMP(1, "list"))      command = COMMAND_LIST;
     else if (ARG_CMP(1, "path"))      command = COMMAND_PATH;
+    else if (ARG_CMP(1, "remove"))    command = COMMAND_REMOVE;
 
     switch (command)
     {
@@ -233,6 +237,7 @@ int main(int argc, const char* argv[])
                     std::cout << "..." << std::endl;
 
                     uninstall_version(install_dir, tools);
+                    state_changed = true;
 
                     for (const std::string& tool : tools) {
                         state.RemoveTool(tool);
@@ -330,6 +335,7 @@ int main(int argc, const char* argv[])
                     std::cout << "..." << std::endl;
 
                     install_version(latest_version, source_dir, install_dir, tools, use_ansi);
+                    state_changed = true;
 
                     for (const std::string& tool : tools) {
                         state.SetTool(tool, latest_version);
@@ -455,6 +461,7 @@ int main(int argc, const char* argv[])
 
                     uninstall_version(install_dir, tools);
                     install_version(latest_version, source_dir, install_dir, tools, use_ansi);
+                    state_changed = true;
 
                     for (const std::string& tool : tools) {
                         state.SetTool(tool, latest_version);
@@ -564,17 +571,24 @@ int main(int argc, const char* argv[])
 
             break;
         }
+
+        case COMMAND_REMOVE: {
+            sh_remove(main_dir.string().c_str());
+            break;
+        }
         
         default:
             std::cerr << "Unknown command: " << argv[1] << std::endl;
             return 1;
     }
 
-    sh_mkdir(state_file.parent_path().string().c_str());
+    if (state_changed) {
+        sh_mkdir(state_file.parent_path().string().c_str());
 
-    if (!state.Save(state_file)) {
-        std::cerr << "Couldn't save state to " << state_file_string << std::endl;
-        return 1;
+        if (!state.Save(state_file)) {
+            std::cerr << "Couldn't save state to " << state_file_string << std::endl;
+            return 1;
+        }
     }
 
     return 0;
