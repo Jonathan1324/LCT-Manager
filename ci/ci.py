@@ -15,6 +15,10 @@ log_path = Path("logs/ci.log")
 logger = logging.getLogger("ci")
 logger.setLevel(logging.DEBUG)
 
+build_log_path = Path("logs/build.log")
+build_logger = logging.getLogger("build")
+build_logger.setLevel(logging.DEBUG)
+
 # Argument parser
 parser = argparse.ArgumentParser(description="CI/CD Script")
 parser.add_argument(
@@ -125,7 +129,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.log:
-        Path("logs").mkdir(exist_ok=True)
+        log_path.parent.mkdir(exist_ok=True)
+        build_log_path.parent.mkdir(exist_ok=True)
 
         file_handler = logging.FileHandler(str(log_path), mode="w", encoding="utf-8")
         file_handler.setLevel(logging.DEBUG)
@@ -138,6 +143,18 @@ if __name__ == "__main__":
         console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
+
+        build_file_handler = logging.FileHandler(str(build_log_path), mode="w", encoding="utf-8")
+        build_file_handler.setLevel(logging.DEBUG)
+        build_file_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        build_file_handler.setFormatter(build_file_formatter)
+        build_logger.addHandler(build_file_handler)
+
+        build_console_handler = logging.StreamHandler()
+        build_console_handler.setLevel(logging.INFO)
+        build_console_formatter = logging.Formatter("[BUILD:%(levelname)s] %(message)s")
+        build_console_handler.setFormatter(build_console_formatter)
+        build_logger.addHandler(build_console_handler)
 
     logger.debug(f"Debug: {args.debug}, Clean: {args.clean}, Build: {args.build}, Test: {args.test}, Archive: {args.archive}")
     archive_name = args.archive_name or "lct"

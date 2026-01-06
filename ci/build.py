@@ -9,7 +9,8 @@ import logging
 
 from ci.os import OS, ARCH, getOS, getArch
 
-logger = logging.getLogger("ci")
+global_logger = logging.getLogger("ci")
+logger = logging.getLogger("build")
 
 class BuildCache:
     def __init__(self, cache_file: Path):
@@ -22,7 +23,7 @@ class BuildCache:
             try:
                 self.hashes = json.loads(self.cache_file.read_text())
             except Exception:
-                print(f"Warning: Failed to load build cache from {self.cache_file}")
+                logger.warning(f"Warning: Failed to load build cache from {self.cache_file}")
                 self.hashes = {}
 
     def save(self):
@@ -116,7 +117,7 @@ def build_src(debug: bool, toolchain: Toolchain, buildCache: BuildCache, build_d
             content_hash = hash_files(all_deps)
 
             if not buildCache.is_up_to_date(target_path, content_hash):
-                print(f"Compiling {file} -> {target_path}")
+                logger.info(f"Compiling {file} -> {target_path}")
                 subprocess.run([compiler, *flags, *dep_args, str(dep_path), "-c", str(file), "-o", str(target_path)], check=True)
 
                 new_deps = parse_gcc_dep_file(dep_path)
@@ -125,7 +126,7 @@ def build_src(debug: bool, toolchain: Toolchain, buildCache: BuildCache, build_d
                 buildCache.update(target_path, new_content_hash)
 
         except subprocess.CalledProcessError as e:
-            print(f"Error: Compilation failed for {file}")
+            logger.error(f"Error: Compilation failed for {file}")
             raise e
 
     linker = toolchain.Linker
@@ -137,12 +138,12 @@ def build_src(debug: bool, toolchain: Toolchain, buildCache: BuildCache, build_d
         content_hash = hash_files(sorted(objects, key=str))
 
         if not buildCache.is_up_to_date(out, content_hash):
-            print(f"Linking {out}")
+            logger.info(f"Linking {out}")
             subprocess.run([linker, *flags, *map(str, objects), "-o", str(out)], check=True)
 
             buildCache.update(out, content_hash)
     except subprocess.CalledProcessError as e:
-        print(f"Error: Linking failed for {out}")
+        logger.error(f"Error: Linking failed for {out}")
         raise e
     
     if not debug:
@@ -152,11 +153,11 @@ def build_src(debug: bool, toolchain: Toolchain, buildCache: BuildCache, build_d
         try:
             subprocess.run([strip, *flags, str(out)], check=True)
         except subprocess.CalledProcessError as e:
-            print(f"Error: Stripping failed for {out}")
+            logger.error(f"Error: Stripping failed for {out}")
             raise e
 
 def build(debug: bool, os: OS, arch: ARCH) -> bool:
-    logger.info("Building the project")
+    global_logger.info("Building the project")
 
     cache: BuildCache = BuildCache(Path(".buildcache.json"))
 
@@ -261,7 +262,7 @@ def build(debug: bool, os: OS, arch: ARCH) -> bool:
 
     except Exception as e:
         cache.save()
-        print(f"Build failed: {e}")
+        logger.error(f"Build failed: {e}")
         return False
 
     cache.save()

@@ -10,6 +10,7 @@
 #include "data/state.hpp"
 #include "terminal/terminal.h"
 #include "shell/shell.h"
+#include "info.hpp"
 
 namespace fs = std::filesystem;
 
@@ -24,6 +25,7 @@ typedef unsigned char Command;
 #define COMMAND_LIST        ((Command)7)
 #define COMMAND_PATH        ((Command)8)
 #define COMMAND_REMOVE      ((Command)9)
+#define COMMAND_INFO        ((Command)10)
 
 #ifdef DEBUG_BUILD
 #define DO_LOCAL_TEST 1
@@ -31,12 +33,11 @@ typedef unsigned char Command;
 #define DO_LOCAL_TEST 0
 #endif
 
-const char* first_version = "v0.1.0-alpha.5-jan2026.2";
-const char* latest_version = "v0.1.0-alpha.5-jan2026.3";
+const char* first_version = "v0.1.0-alpha.5-jan2026.4";
+const char* latest_version = "v0.1.0-alpha.5-jan2026.4";
 
 static std::unordered_map<std::string, int> versions = {
-    {"v0.1.0-alpha.5-jan2026.2", 0},
-    {"v0.1.0-alpha.5-jan2026.3", 1}
+    {"v0.1.0-alpha.5-jan2026.4", 0}
 };
 
 static std::unordered_map<std::string, std::vector<std::string>> valid_tools_deps = {
@@ -81,6 +82,7 @@ void printHelp(const char* name, std::ostream& out, bool use_ansi)
     out << "> " << name << " list" << std::endl;
     out << "> " << name << " path" << std::endl;
     out << "> " << name << " remove" << std::endl;
+    out << "> " << name << " info" << std::endl;
 }
 
 #define ARG_CMP(n, str) (std::strcmp(argv[n], str) == 0)
@@ -138,6 +140,7 @@ int main(int argc, const char* argv[])
     else if (ARG_CMP(1, "list"))      command = COMMAND_LIST;
     else if (ARG_CMP(1, "path"))      command = COMMAND_PATH;
     else if (ARG_CMP(1, "remove"))    command = COMMAND_REMOVE;
+    else if (ARG_CMP(1, "info"))      command = COMMAND_INFO;
 
     switch (command)
     {
@@ -577,6 +580,11 @@ int main(int argc, const char* argv[])
             break;
         }
         
+        case COMMAND_INFO: {
+            printInfo(std::cout, argc, argv);
+            break;
+        }
+
         default:
             std::cerr << "Unknown command: " << argv[1] << std::endl;
             return 1;
