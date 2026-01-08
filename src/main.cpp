@@ -33,6 +33,8 @@ typedef unsigned char Command;
 #define DO_LOCAL_TEST 0
 #endif
 
+#define VERSION "v0.1.0-alpha.2-after"
+
 const char* first_version = "v0.1.0-alpha.5-jan2026.4";
 const char* latest_version = "v0.1.0-alpha.5-jan2026.5";
 
@@ -59,8 +61,6 @@ static std::unordered_map<std::string, std::vector<std::string> > bundles = {
 
     {"fun", {"lbf", "ljoke", "lhoho"}}
 };
-
-#define VERSION "v0.1.0-alpha.2"
 
 void printVersion(bool use_ansi)
 {
